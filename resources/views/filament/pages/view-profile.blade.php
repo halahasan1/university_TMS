@@ -13,7 +13,7 @@
                         </div>
                     @else
                         <div class="w-full h-full rounded-full overflow-hidden bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center shadow-lg">
-                            <img src="{{ asset('images/default-avatar.png') }}"
+                            <img src="{{ 'https://ui-avatars.com/api/?name=' . urlencode($user?->name) }}"
                                  alt="Default Avatar"
                                  class="w-3/4 h-3/4 object-contain opacity-80 group-hover:opacity-100 transition-opacity duration-500">
                         </div>

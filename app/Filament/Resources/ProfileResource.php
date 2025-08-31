@@ -46,7 +46,8 @@ class ProfileResource extends Resource
                         Forms\Components\Select::make('department_id')
                             ->relationship('department', 'name')
                             ->searchable()
-                            ->preload(),
+                            ->preload()
+                            ->visible(fn () => !auth()->user()?->hasRole('super_admin')),
 
                         Forms\Components\Textarea::make('bio')
                             ->columnSpanFull()
@@ -55,28 +56,7 @@ class ProfileResource extends Resource
             ]);
     }
 
-    public static function table(Table $table): Table
-    {
-        return $table
-            ->columns([
-                Tables\Columns\ImageColumn::make('image_path')
-                ->label('Avatar')
-                ->disk('public')
-                ->circular()
-                ->defaultImageUrl(url('/images/default-avatar.png')),
 
-                Tables\Columns\TextColumn::make('user.name')
-                    ->label('User Name')
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('phone')
-                    ->searchable(),
-            ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-            ]);
-    }
 
     public static function getPages(): array
     {
@@ -85,6 +65,12 @@ class ProfileResource extends Resource
             'view' => ViewProfile::route('/{record}'),
             'edit' =>EditProfile::route('/{record}/edit'),
         ];
+    }
+    public static function getNavigationUrl(): string
+    {
+        return static::getUrl('view', [
+            'record' => auth()->user()?->profile?->id,
+        ]);
     }
 
 }

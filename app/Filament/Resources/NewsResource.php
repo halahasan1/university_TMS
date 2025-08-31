@@ -26,6 +26,16 @@ class NewsResource extends Resource
         return $form
             ->schema([
                 Forms\Components\TextInput::make('title')->required(),
+                Forms\Components\Select::make('audience_type')
+                ->label('Audience')
+                ->options([
+                    'global' => 'All University',
+                    'department_only' => 'My Department Only',
+                ])
+                ->default('global')
+                ->required()
+                ->visible(fn () => auth()->user()->hasAnyRole(['professor', 'dean', 'student-representative'])),
+
                 Forms\Components\RichEditor::make('body')
                 ->required()
                 ->columnSpanFull(),
@@ -67,13 +77,5 @@ class NewsResource extends Resource
         ];
     }
 
-    public static function canViewAny(): bool
-    {
-        return auth()->user()->hasAnyRole([
-            'super-admin',
-            'dean',
-            'professor',
-            'student-representative'
-        ]);
-    }
+
 }

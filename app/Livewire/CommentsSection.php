@@ -41,7 +41,7 @@ class CommentsSection extends Component
             'body' => $this->body,
         ]);
 
-        $this->commentBody = '';
+        $this->body = '';
         $this->loadComments();
     }
 

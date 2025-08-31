@@ -2,9 +2,10 @@
 
 namespace App\Filament\Resources\ProfileResource\Pages;
 
-use App\Filament\Resources\ProfileResource;
 use Filament\Actions;
+use Illuminate\Support\Facades\Auth;
 use Filament\Resources\Pages\EditRecord;
+use App\Filament\Resources\ProfileResource;
 
 class EditProfile extends EditRecord
 {
@@ -15,5 +16,11 @@ class EditProfile extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
+    }
+    protected function getRedirectUrl(): string
+    {
+        return ProfileResource::getUrl('view', [
+            'record' => Auth::user()->profile->id,
+        ]);
     }
 }

@@ -9,7 +9,7 @@ class News extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'title', 'body','images'];
+    protected $fillable = ['user_id', 'title', 'body','images','audience_type'];
 
     protected $casts = [
         'images' => 'array',
@@ -27,7 +27,7 @@ class News extends Model
 
     public function likes()
     {
-        return $this->hasMany(Like::class);
+        return $this->morphMany(Like::class, 'likeable');
     }
 
     public function isLikedBy(User $user): bool

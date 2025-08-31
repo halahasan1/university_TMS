@@ -17,6 +17,10 @@ class MyTasks extends Page
     protected static ?int $navigationSort = 3;
 
 
+    public static function shouldRegisterNavigation(array $parameters = []): bool
+    {
+        return auth()->check() && !auth()->user()->hasRole('super_admin');
+    }
     public function getTasksProperty()
     {
         return Task::where('assigned_to', auth()->id())->with('subtasks')->get();

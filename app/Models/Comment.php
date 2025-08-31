@@ -12,7 +12,7 @@ class Comment extends Model
         'user_id',
         'commentable_type',
         'commentable_id',
-        'content',
+        'body',
     ];
 
     public function user(): BelongsTo
@@ -23,5 +23,15 @@ class Comment extends Model
     public function commentable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function likes()
+    {
+        return $this->morphMany(Like::class, 'likeable');
+    }
+    
+    public function isLikedBy($user)
+    {
+        return $this->likes()->where('user_id', $user->id)->exists();
     }
 }

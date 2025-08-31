@@ -13,6 +13,10 @@ class ViewProfile extends ViewRecord
 
     protected static string $view = 'filament.pages.view-profile';
 
+    protected static bool $hasBreadcrumbs = false;
+
+
+
     protected function getHeaderActions(): array
     {
         return [

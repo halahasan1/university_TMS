@@ -4,55 +4,74 @@
     $images = is_array($record->images) ? $record->images : [];
     $isOwner = auth()->id() === $user?->id;
     $likes = $record->likes()->with(['user.profile'])->get();
+    $isDepartmentOnly = $record->audience_type === 'department_only';
+    $departmentName = $record->user->profile->department->name ?? 'Department';
 @endphp
+
 
 <!-- Include Swiper CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
-<div x-data="{ showLikesModal: false, showImageModal: false, currentImageIndex: 0 }" class="w-full max-w-2xl mx-auto my-6">
+    <div x-data="{ showLikesModal: false, showImageModal: false, currentImageIndex: 0 }" class="w-full max-w-2xl mx-auto my-6">
     <div class="rounded-lg border border-gray-200 bg-white shadow-md overflow-hidden">
 
         {{-- Post Header --}}
-        <div class="p-4 flex justify-between items-center border-b border-gray-100">
-            <div class="flex items-center gap-3">
-                <img
-                    src="{{ $profile && $profile->image_path ? asset('storage/' . $profile->image_path) : 'https://ui-avatars.com/api/?name=' . urlencode($user?->name) }}"
-                    alt="{{ $user?->name }}"
-                    class="w-10 h-10 rounded-full object-cover"
-                />
-                <div>
-                    <div class="font-semibold text-gray-900 text-sm">{{ $user?->name }}</div>
-                    <div class="text-xs text-gray-500">{{ $record->created_at->diffForHumans() }}</div>
-                </div>
-            </div>
+<div class="p-4 flex items-start justify-between border-b border-gray-100 relative">
 
-            @if($isOwner)
-            <div x-data="{ open: false }" class="relative z-30">
-                <button @click="open = !open" class="text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                    </svg>
-                </button>
-                <div x-show="open" @click.away="open = false"
-                     class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
-                     x-transition:enter="transition ease-out duration-100"
-                     x-transition:enter-start="transform opacity-0 scale-95"
-                     x-transition:enter-end="transform opacity-100 scale-100"
-                     x-transition:leave="transition ease-in duration-75"
-                     x-transition:leave-start="transform opacity-100 scale-100"
-                     x-transition:leave-end="transform opacity-0 scale-95"
-                     x-cloak>
-                    <a href="{{ route('filament.adminPanel.resources.news.edit', ['record' => $record]) }}"
-                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
-                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                       </svg>
-                       Edit Post
-                    </a>
-                </div>
+    {{-- User Info --}}
+    <div class="flex items-center gap-3">
+        <img
+            src="{{ $profile && $profile->image_path ? asset('storage/' . $profile->image_path) : 'https://ui-avatars.com/api/?name=' . urlencode($user?->name) }}"
+            alt="{{ $user?->name }}"
+            class="w-10 h-10 rounded-full object-cover"
+        />
+        <div>
+            <div class="flex items-center gap-2">
+                <div class="font-semibold text-gray-900 text-sm">{{ $user?->name }}</div>
+
+                {{-- Audience Badge --}}
+                @if ($isDepartmentOnly)
+                    <span class="inline-flex items-center px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
+                        🏫 {{ $departmentName }}
+                    </span>
+                @else
+                    <span class="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                        🌐 Public
+                    </span>
+                @endif
             </div>
-            @endif
+            <div class="text-xs text-gray-500">{{ $record->created_at->diffForHumans() }}</div>
         </div>
+    </div>
+
+    {{-- Edit Dropdown --}}
+    @if($isOwner || auth()->user()?->hasRole('super_admin'))
+    <div x-data="{ open: false }" class="relative ml-2">
+            <button @click="open = !open" class="text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                </svg>
+            </button>
+            <div x-show="open" @click.away="open = false"
+                 class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
+                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter-start="transform opacity-0 scale-95"
+                 x-transition:enter-end="transform opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-75"
+                 x-transition:leave-start="transform opacity-100 scale-100"
+                 x-transition:leave-end="transform opacity-0 scale-95"
+                 x-cloak>
+                 <a href="{{ route('filament.adminPanel.resources.news.edit', ['record' => $record]) }}"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                 </a>
+            </div>
+        </div>
+    @endif
+</div>
+
 
         {{-- Post Content --}}
         <div class="p-4">

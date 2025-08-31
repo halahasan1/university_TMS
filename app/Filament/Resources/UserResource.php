@@ -50,6 +50,14 @@ class UserResource extends Resource
                             ->password()
                             ->required(fn (string $operation): bool => $operation === 'create')
                     ]),
+                Section::make('Profile Details')
+                            ->schema([
+                                Forms\Components\Select::make('profile.department_id')
+                                    ->label('Department')
+                                    ->relationship('profile.department', 'name')
+                                    ->searchable()
+                                    ->required()
+                            ]),
 
                 Section::make('Roles')
                     ->visible(fn (): bool => auth()->user()->hasRole('super_admin'))
@@ -71,10 +79,10 @@ class UserResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('profile.image_path')
                 ->label('image')
-                ->formatStateUsing(function ($state) {
+                ->formatStateUsing(function ($state, $record) {
                     $url = $state
                         ? asset('storage/' . $state)
-                        : asset('images/default-avatar.jpg');
+                        : 'https://ui-avatars.com/api/?name=' . urlencode($record->name); // <-- هذا هو التعديل
 
                     return "<img src='{$url}' style='width: 50px; height: 50px; border-radius: 50%; object-fit: cover;' />";
                 })
