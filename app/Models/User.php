@@ -67,12 +67,28 @@ class User extends Authenticatable
     // News created by user
     public function news(): HasMany
     {
-        return $this->hasMany(News::class, 'author_id');
+        return $this->hasMany(News::class, 'user_id');
     }
     // Comments
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);
+    }
+    public function studentReviews()
+    {
+        return $this->hasMany(StudentReview::class);
+    }
+    //helper method
+    public function department()
+    {
+        return $this->hasOneThrough(
+            Department::class,
+            Profile::class,
+            'user_id',
+            'id',
+            'id',
+            'department_id'
+        );
     }
 
 

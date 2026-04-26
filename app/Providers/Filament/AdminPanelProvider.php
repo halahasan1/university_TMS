@@ -22,6 +22,7 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use App\Filament\Resources\CourseResource\Pages\MyCourses;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -45,6 +46,7 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 \App\Filament\Pages\Dashboard::class,
                 MyTasks::class,
+                MyCourses::class,
 
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
@@ -79,7 +81,12 @@ class AdminPanelProvider extends PanelProvider
                     ->visible(fn (): bool => auth()->user()->hasRole(['student', 'professor', 'dean']))
                     ->isActiveWhen(fn (): bool => request()->routeIs('filament.pages.my-tasks'))
                     ->sort(3),
-            ])
+                // NavigationItem::make('My Courses')
+                    // ->url(fn (): string => MyCourses::getUrl())
+                    // ->icon('heroicon-o-academic-cap')
+                    // ->visible(fn (): bool => auth()->user()->hasRole('student'))
+                    // ->isActiveWhen(fn (): bool => request()->url() === \App\Filament\Resources\CourseResource\Pages\MyCourses::getUrl())
+                    ])
             ->authMiddleware([
                 Authenticate::class,
             ]);

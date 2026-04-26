@@ -11,7 +11,8 @@ class WeeklyCalendarWidget extends Widget
     protected static ?string $heading = 'This Week';
     protected static string $view = 'filament.widgets.weekly-calendar';
     protected int|string|array $columnSpan = 'full';
-
+    protected static bool $isLazy = true;
+    
     public static function canView(): bool
     {
         return auth()->user()?->hasRole('super_admin') ?? false;

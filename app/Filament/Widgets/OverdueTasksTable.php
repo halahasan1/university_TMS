@@ -12,6 +12,7 @@ class OverdueTasksTable extends BaseTableWidget
 {
     protected static ?string $heading = 'Overdue Tasks';
     protected int|string|array $columnSpan = 'full';
+    protected static bool $isLazy = true;
 
     public static function canView(): bool
     {
@@ -21,9 +22,11 @@ class OverdueTasksTable extends BaseTableWidget
     protected function getTableQuery(): Builder
     {
         return Task::query()
-            ->where('status','!=','completed')
+            ->select(['id', 'title', 'due_date', 'assigned_to', 'status'])
+            ->with('assignedTo:id,name')
+            ->where('status', '!=', 'completed')
             ->whereNotNull('due_date')
-            ->where('due_date','<', now())
+            ->where('due_date', '<', now())
             ->orderBy('due_date');
     }
 

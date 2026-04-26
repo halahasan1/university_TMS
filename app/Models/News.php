@@ -34,4 +34,12 @@ class News extends Model
     {
         return $this->likes()->where('user_id', $user->id)->exists();
     }
+    protected static function booted()
+    {
+        static::creating(function ($news) {
+            if (auth()->check() && empty($news->department_id)) {
+                $news->department_id = auth()->user()?->profile?->department_id;
+            }
+        });
+    }
 }

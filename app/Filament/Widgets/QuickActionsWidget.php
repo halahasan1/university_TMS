@@ -9,6 +9,7 @@ class QuickActionsWidget extends Widget
     protected static ?string $heading = 'Quick Actions';
     protected static string $view = 'filament.widgets.quick-actions';
     protected int|string|array $columnSpan = ['sm' => 'full', 'lg' => 1, 'xl' => 1];
+    protected static bool $isLazy = true;
 
     public static function canView(): bool
     {

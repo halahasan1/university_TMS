@@ -21,6 +21,16 @@ class DatabaseSeeder extends Seeder
             SubtaskSeeder::class,
             CommentSeeder::class,
             LikeSeeder::class,
+            FacultySeeder::class,
+            DepartmentSeeder::class,
+            AcademicYearSeeder::class,
+            CourseSeeder::class,
+            CourseMaterialSeeder::class,
+            QuestionSeeder::class,
+            ExamSeeder::class,
+            ExamQuestionSeeder::class,
+            ExamAttemptSeeder::class,
+            ExamAnswerSeeder::class
         ]);
     }
 }

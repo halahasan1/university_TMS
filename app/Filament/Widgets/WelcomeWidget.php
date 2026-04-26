@@ -6,8 +6,9 @@ use Filament\Widgets\Widget;
 
 class WelcomeWidget extends Widget
 {
-    protected static ?string $heading = null; 
+    protected static ?string $heading = null;
     protected static string $view = 'filament.widgets.welcome-widget';
+    protected static bool $isLazy = true;
 
     protected int|string|array $columnSpan = ['sm' => 1, 'lg' => 1, 'xl' => 1];
 

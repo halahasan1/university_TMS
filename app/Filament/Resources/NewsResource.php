@@ -1,6 +1,5 @@
 <?php
 
-// app/Filament/Resources/NewsResource.php
 namespace App\Filament\Resources;
 
 use App\Models\News;
@@ -9,8 +8,6 @@ use Filament\Tables;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 use Filament\Forms\Form;
-use Illuminate\Support\Facades\Auth;
-use Filament\Tables\Columns\ImageColumn;
 use App\Filament\Resources\NewsResource\Pages;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ViewColumn;

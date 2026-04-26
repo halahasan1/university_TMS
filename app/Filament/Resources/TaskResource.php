@@ -25,13 +25,14 @@ class TaskResource extends Resource
 {
     protected static ?string $model = Task::class;
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
-    protected static ?string $navigationLabel = 'Tasks';
+    protected static ?string $navigationLabel = 'Managed Tasks';
     protected static ?int $navigationSort = 2;
 
 
     public static function form(Form $form): Form
     {
         $user = Auth::user();
+        $userDepartmentId = $user->profile?->department_id;
 
         return $form
             ->schema([
@@ -55,27 +56,38 @@ class TaskResource extends Resource
                     ->default('medium')
                     ->required(),
 
-                Select::make('assigned_to')
+                    Select::make('assigned_to')
                     ->label('Assign To')
-                    ->options(function () use ($user) {
-
+                    ->options(function () use ($user, $userDepartmentId) {
                         if ($user->hasRole('super_admin')) {
-                            return User::where('id', '!=', $user->id)->pluck('name', 'id');
+                            return User::where('id', '!=', $user->id)
+                                ->pluck('name', 'id');
                         }
 
                         if ($user->hasRole('dean')) {
-                            return User::role(['professor', 'student'])->pluck('name', 'id');
+                            return User::whereHas('profile', function ($query) use ($userDepartmentId) {
+                                    $query->where('department_id', $userDepartmentId);
+                                })
+                                ->role(['professor', 'student'])
+                                ->where('id', '!=', $user->id)
+                                ->pluck('name', 'id');
                         }
 
                         if ($user->hasRole('professor')) {
-                            return User::role('student')->pluck('name', 'id');
+                            return User::whereHas('profile', function ($query) use ($userDepartmentId) {
+                                    $query->where('department_id', $userDepartmentId);
+                                })
+                                ->role('student')
+                                ->pluck('name', 'id');
                         }
 
                         return [];
                     })
                     ->required()
                     ->searchable()
-                    ->preload(),
+                    ->preload()
+                    ->visible(fn () => !auth()->user()->hasRole('student'))
+                    ->helperText('Users are filtered based on your role and department.'),
 
                 FileUpload::make('file_path')
                     ->label('Attach File')
@@ -97,12 +109,14 @@ class TaskResource extends Resource
                     ->createItemButtonLabel('Add Subtask')
                     ->label('Subtasks'),
 
-                Select::make('status')
+                    Select::make('status')
                     ->default('pending')
                     ->options([
                         'pending' => 'Pending',
                         'in_progress' => 'In Progress',
+                        'in_review' => 'In Review',
                         'completed' => 'Completed',
+                        'cancelled' => 'Cancelled',
                     ])
                     ->required()
                     ->visible(fn () => !auth()->user()->hasRole('student')),
@@ -119,27 +133,45 @@ class TaskResource extends Resource
                     'low' => 'gray',
                     'medium' => 'warning',
                     'high' => 'danger',
+                    default => 'gray',
                 }),
-                Tables\Columns\TextColumn::make('status')->badge()->color(fn ($state) => match ($state) {
+                Tables\Columns\TextColumn::make('status')
+                ->badge()
+                ->color(fn ($state) => match ($state) {
                     'pending' => 'gray',
                     'in_progress' => 'info',
+                    'in_review' => 'warning',
                     'completed' => 'success',
+                    'cancelled' => 'danger',
+                    default => 'gray',
                 })
+                ->sortable(),
+                Tables\Columns\TextColumn::make('department.name')
+                ->label('Department')
                 ->sortable()
-                ,
+                ->toggleable(),
                 Tables\Columns\TextColumn::make('assignedTo.name')->label('Assigned To'),
 
                 Tables\Columns\TextColumn::make('createdBy.name')->label('Created By'),
 
                 Tables\Columns\TextColumn::make('due_date')->dateTime()->sortable(),
+                Tables\Columns\TextColumn::make('completed_at')
+                ->label('Completed At')
+                ->dateTime()
+                ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'pending' => 'Pending',
                         'in_progress' => 'In Progress',
+                        'in_review' => 'In Review',
                         'completed' => 'Completed',
+                        'cancelled' => 'Cancelled',
                     ]),
+
+                Tables\Filters\SelectFilter::make('department')
+                    ->relationship('department', 'name'),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
@@ -173,9 +205,23 @@ class TaskResource extends Resource
     }
 
 
-    public static function shouldRegisterNavigation(): bool
+    public static function getEloquentQuery(): Builder
     {
-        return auth()->user()->hasAnyRole(['super_admin', 'dean', 'professor']);
+        $user = auth()->user();
+        $query = parent::getEloquentQuery();
+
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($user->hasRole('super_admin')) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($user) {
+            $q->where('created_by', $user->id)
+              ->orWhere('assigned_to', $user->id);
+        });
     }
 
 }

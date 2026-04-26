@@ -12,7 +12,6 @@ class ListTasks extends ListRecords
 {
     protected static string $resource = TaskResource::class;
 
-
     protected function getTableQuery(): Builder
     {
         $query = parent::getTableQuery();
@@ -22,8 +21,8 @@ class ListTasks extends ListRecords
         }
 
         return $query->where('created_by', auth()->id());
-    }
 
+    }
     protected function getHeaderActions(): array
     {
         return [

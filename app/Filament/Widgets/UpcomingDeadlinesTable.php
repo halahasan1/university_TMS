@@ -12,6 +12,7 @@ class UpcomingDeadlinesTable extends BaseTableWidget
 {
     protected static ?string $heading = 'Upcoming Deadlines (7d)';
     protected int|string|array $columnSpan = 'full';
+    protected static bool $isLazy = true;
 
     public static function canView(): bool
     {
@@ -21,6 +22,8 @@ class UpcomingDeadlinesTable extends BaseTableWidget
     protected function getTableQuery(): Builder
     {
         return Task::query()
+            ->select(['id', 'title', 'due_date', 'assigned_to', 'status'])
+            ->with('assignedTo:id,name')
             ->whereNotNull('due_date')
             ->whereBetween('due_date', [now()->startOfWeek(), now()->endOfWeek()])
             ->orderBy('due_date');

@@ -14,7 +14,8 @@ class NotificationsTable extends BaseTableWidget
     protected static ?string $heading = 'Notifications';
     public static function canView(): bool { return auth()->check(); }
     protected int|string|array $columnSpan = 'full';
-    protected static ?string $pollingInterval = '10s';
+    protected static ?string $pollingInterval = '60s';
+    protected static bool $isLazy = true;
 
 
     protected function getTableQuery(): Builder
@@ -73,7 +74,9 @@ class NotificationsTable extends BaseTableWidget
             Tables\Actions\Action::make('mark_all')
                 ->label('Mark all as read')
                 ->action(function () {
-                    auth()->user()->unreadNotifications->markAsRead();
+                    auth()->user()
+                    ->unreadNotifications()
+                    ->update(['read_at' => now()]);
                 })
                 ->color('gray'),
         ];

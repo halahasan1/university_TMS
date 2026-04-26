@@ -105,7 +105,7 @@
                                 <div class="swiper-slide">
                                     <img
                                         src="{{ asset('storage/' . $img) }}"
-                                        class="w-full h-full object-cover cursor-pointer"
+                                        class="w-full h-auto max-h-[80vh] object-contain cursor-pointer"
                                         @click="showImageModal = true; currentImageIndex = {{ $index }}"
                                     />
                                 </div>

@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\News;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Cache;
 
 class NewsPerDepartmentPie extends ChartWidget
 {
@@ -17,14 +18,16 @@ class NewsPerDepartmentPie extends ChartWidget
 
     protected function getData(): array
     {
-        $rows = News::query()
-            ->join('users','users.id','=','news.user_id')
-            ->join('profiles','profiles.user_id','=','users.id')
-            ->join('departments','departments.id','=','profiles.department_id')
-            ->selectRaw('departments.name dept, COUNT(news.id) total')
-            ->groupBy('departments.name')
-            ->orderBy('total','desc')
-            ->pluck('total','dept');
+        $rows = Cache::remember('chart_news_per_department', now()->addMinutes(10), function () {
+            return News::query()
+                ->join('users', 'users.id', '=', 'news.user_id')
+                ->join('profiles', 'profiles.user_id', '=', 'users.id')
+                ->join('departments', 'departments.id', '=', 'profiles.department_id')
+                ->selectRaw('departments.name dept, COUNT(news.id) total')
+                ->groupBy('departments.name')
+                ->orderBy('total', 'desc')
+                ->pluck('total', 'dept');
+        });
 
         return [
             'datasets' => [['label' => 'News', 'data' => $rows->values()->all()]],

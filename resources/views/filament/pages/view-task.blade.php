@@ -1,340 +1,728 @@
 <x-filament::page>
 @php
-    $total    = $record->subtasks->count();
-    $done     = $record->subtasks->where('done', true)->count();
+    $total = $record->subtasks->count();
+    $done = $record->subtasks->where('done', true)->count();
     $progress = $total ? round(($done / $total) * 100) : ($record->status === 'completed' ? 100 : 0);
 
-    $priorityColors = [
-        'low'     => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-        'medium'  => 'bg-amber-50  text-amber-700  ring-amber-200',
-        'high'    => 'bg-rose-50   text-rose-700   ring-rose-200',
-    ];
-    $statusColors = [
-        'pending'     => 'bg-gray-100  text-gray-800  ring-gray-200',
-        'in_progress' => 'bg-sky-50    text-sky-700   ring-sky-200',
-        'completed'   => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    $priorityClasses = [
+        'low' => 'badge-soft badge-green',
+        'medium' => 'badge-soft badge-yellow',
+        'high' => 'badge-soft badge-red',
     ];
 
-    $now  = now();
-    $diff = $now->diff($record->due_date, false);
-    if ($diff->invert) {
-        $dueText = 'Overdue: '.($diff->d).'d '.($diff->h).'h';
-        $dueChip = 'bg-rose-50 text-rose-700 ring-rose-200';
-    } elseif ($diff->days === 0 && $diff->h === 0) {
-        $dueText = 'Due now';
-        $dueChip = 'bg-amber-50 text-amber-700 ring-amber-200';
+    $statusClasses = [
+        'pending' => 'badge-soft badge-gray',
+        'in_progress' => 'badge-soft badge-blue',
+        'in_review' => 'badge-soft badge-yellow',
+        'completed' => 'badge-soft badge-green',
+        'cancelled' => 'badge-soft badge-red',
+    ];
+
+    $now = now();
+
+    if ($record->due_date) {
+        $diff = $now->diff($record->due_date, false);
+
+        if ($diff->invert) {
+            $dueText = 'Overdue';
+            $dueSubtext = $diff->d . 'd ' . $diff->h . 'h late';
+            $dueClass = 'text-red-600';
+        } elseif ($diff->days === 0 && $diff->h === 0) {
+            $dueText = 'Due now';
+            $dueSubtext = 'Take action soon';
+            $dueClass = 'text-amber-600';
+        } else {
+            $dueText = 'Upcoming';
+            $dueSubtext = $diff->d . 'd ' . $diff->h . 'h left';
+            $dueClass = 'text-indigo-600';
+        }
     } else {
-        $dueText = 'Due in: '.$diff->d.'d '.$diff->h.'h';
-        $dueChip = 'bg-indigo-50 text-indigo-700 ring-indigo-200';
+        $dueText = 'No due date';
+        $dueSubtext = 'Not specified';
+        $dueClass = 'text-gray-500';
     }
-
-    $steps       = ['pending','in_progress','completed'];
-    $currentStep = array_search($record->status, $steps, true) ?: 0;
 @endphp
 
-<div class="max-w-6xl mx-auto space-y-8">
+<div class="task-view-wrap">
+    {{-- Header --}}
+    <section class="soft-card hero-card">
+        <div class="hero-top">
+            <div class="hero-main">
+                <div class="eyebrow">Task overview</div>
+                <h1 class="task-title">{{ $record->title }}</h1>
 
-    {{-- Header / Title --}}
-    <div class="card card--elev p-6">
-        <div class="flex flex-col gap-4">
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <h2 class="text-2xl font-semibold text-gray-900 leading-snug">
-                    {{ $record->title }}
-                </h2>
+                @if($record->description)
+                    <p class="task-description">{{ $record->description }}</p>
+                @else
+                    <p class="task-description muted">No description provided for this task.</p>
+                @endif
+            </div>
 
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="chip ring chip--soft {{ $statusColors[$record->status] ?? 'bg-gray-100 text-gray-800 ring-gray-200' }}">
-                        Status: {{ str($record->status)->replace('_',' ')->title() }}
-                    </span>
-                    <span class="chip ring chip--soft {{ $priorityColors[$record->priority] ?? 'bg-gray-100 text-gray-800 ring-gray-200' }}">
-                        Priority: {{ ucfirst($record->priority) }}
-                    </span>
-                    <span class="chip ring chip--soft {{ $dueChip }}">
-                        {{ $dueText }}
-                    </span>
+            <div class="hero-badges">
+                <span class="{{ $statusClasses[$record->status] ?? 'badge-soft badge-gray' }}">
+                    {{ str($record->status)->replace('_', ' ')->title() }}
+                </span>
+
+                <span class="{{ $priorityClasses[$record->priority] ?? 'badge-soft badge-gray' }}">
+                    {{ ucfirst($record->priority) }} priority
+                </span>
+
+                <span class="badge-soft badge-dark">
+                    {{ $progress }}% progress
+                </span>
+            </div>
+        </div>
+
+        <div class="progress-block">
+            <div class="progress-meta">
+                <span>Checklist progress</span>
+                <span>{{ $done }} / {{ $total }} completed</span>
+            </div>
+            <div class="progress-track-modern">
+                <div class="progress-fill-modern" style="width: {{ $progress }}%"></div>
+            </div>
+        </div>
+    </section>
+
+    {{-- Info grid --}}
+    <section class="info-grid">
+        <div class="soft-card info-card">
+            <div class="info-label">Due date</div>
+            <div class="info-value">
+                {{ $record->due_date ? $record->due_date->format('M d, Y • h:i A') : '—' }}
+            </div>
+            <div class="info-sub {{ $dueClass }}">{{ $dueText }}</div>
+            <div class="info-meta">{{ $dueSubtext }}</div>
+        </div>
+
+        <div class="soft-card info-card">
+            <div class="info-label">Assigned to</div>
+            <div class="person-row">
+                <img
+                    class="avatar-modern"
+                    src="{{ optional($record->assignedTo->profile)->image_path
+                        ? asset('storage/' . $record->assignedTo->profile->image_path)
+                        : 'https://ui-avatars.com/api/?name=' . urlencode(optional($record->assignedTo)->name) }}"
+                    alt="{{ $record->assignedTo->name ?? 'Assigned user' }}"
+                >
+                <div>
+                    <div class="info-value small">{{ $record->assignedTo->name ?? '-' }}</div>
+                    <div class="info-meta">Task assignee</div>
                 </div>
             </div>
-
-            @if($record->description)
-                <p class="text-gray-700 leading-relaxed">{{ $record->description }}</p>
-            @endif
         </div>
 
-        {{-- Timeline --}}
-        <div class="mt-6">
-            <div class="flex items-center gap-3">
-                @foreach ($steps as $i => $step)
-                    <div class="flex items-center gap-3">
-                        <div class="step-dot {{ $i <= $currentStep ? 'step-dot--active' : '' }}">
-                            {{ $i+1 }}
-                        </div>
-                        <div class="text-xs font-medium {{ $i <= $currentStep ? 'text-gray-900' : 'text-gray-400' }}">
-                            {{ str($step)->replace('_',' ')->title() }}
-                        </div>
+        <div class="soft-card info-card">
+            <div class="info-label">Created by</div>
+            <div class="person-row">
+                <img
+                    class="avatar-modern"
+                    src="{{ optional($record->createdBy->profile)->image_path
+                        ? asset('storage/' . $record->createdBy->profile->image_path)
+                        : 'https://ui-avatars.com/api/?name=' . urlencode(optional($record->createdBy)->name) }}"
+                    alt="{{ $record->createdBy->name ?? 'Creator' }}"
+                >
+                <div>
+                    <div class="info-value small">{{ $record->createdBy->name ?? '-' }}</div>
+                    <div class="info-meta">Task creator</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="soft-card info-card">
+            <div class="info-label">Details</div>
+            <div class="meta-list">
+                <div class="meta-row">
+                    <span>Department</span>
+                    <strong>{{ $record->department->name ?? '-' }}</strong>
+                </div>
+
+                <div class="meta-row">
+                    <span>Created</span>
+                    <strong>{{ $record->created_at->format('M d, Y') }}</strong>
+                </div>
+
+                @if($record->started_at)
+                    <div class="meta-row">
+                        <span>Started</span>
+                        <strong>{{ $record->started_at->format('M d, Y') }}</strong>
                     </div>
-                    @if ($i < count($steps)-1)
-                        <div class="step-line {{ $i < $currentStep ? 'step-line--active' : '' }}"></div>
-                    @endif
-                @endforeach
+                @endif
+
+                @if($record->completed_at)
+                    <div class="meta-row">
+                        <span>Completed</span>
+                        <strong>{{ $record->completed_at->format('M d, Y') }}</strong>
+                    </div>
+                @endif
             </div>
         </div>
-    </div>
+    </section>
 
-    {{-- Meta / KPIs --}}
-    <div class="grid lg:grid-cols-3 gap-6">
-        <div class="card card--elev p-5">
-            <div class="text-sm text-gray-600">Due date</div>
-            <div class="mt-1 text-base font-semibold text-gray-900">
-                {{ $record->due_date->format('M d, Y H:i') }}
-            </div>
-            <div class="mt-2 text-xs text-gray-500">
-                Created: {{ $record->created_at->format('M d, Y H:i') }}
+    {{-- Attachment + checklist --}}
+    <section class="content-grid">
+        <div class="soft-card attachment-card">
+            <div class="section-head">
+                <h2>Attachment</h2>
             </div>
 
             @if ($record->file_path)
-                <a href="{{ asset('storage/'.$record->file_path) }}" class="mt-4 inline-flex items-center gap-2 text-amber-700 font-medium hover:opacity-80 transition">
-                    <x-heroicon-o-arrow-down-circle class="w-5 h-5" />
-                    Download attachment
+                <a href="{{ asset('storage/' . $record->file_path) }}" class="attachment-link">
+                    <x-heroicon-o-arrow-down-tray class="w-5 h-5" />
+                    <span>Download attached file</span>
                 </a>
             @else
-                <div class="mt-4 text-sm text-gray-500">No attachments</div>
+                <div class="empty-box">
+                    No file attached to this task.
+                </div>
             @endif
         </div>
 
-        <div class="card card--elev p-5">
-            <div class="grid grid-cols-3 gap-4">
-                <div class="kpi kpi--elev">
-                    <div class="text-xs text-gray-500">Subtasks</div>
-                    <div class="text-xl font-semibold text-gray-900">{{ $total }}</div>
-                </div>
-                <div class="kpi kpi--elev">
-                    <div class="text-xs text-gray-500">Done</div>
-                    <div class="text-xl font-semibold text-emerald-600">{{ $done }}</div>
-                </div>
-                <div class="kpi kpi--elev">
-                    <div class="text-xs text-gray-500">Progress</div>
-                    <div class="text-xl font-semibold text-amber-600">{{ $progress }}%</div>
-                </div>
+        <div class="soft-card checklist-card">
+            <div class="section-head">
+                <h2>Checklist</h2>
+                <span class="section-counter">{{ $done }} / {{ $total }}</span>
             </div>
 
-            <div class="mt-4 h-2 w-full progress-track rounded-full overflow-hidden">
-                <div class="h-full progress-bar rounded-full" style="width: {{ $progress }}%"></div>
-            </div>
-        </div>
-
-        <div class="card card--elev p-5">
-            <div class="flex flex-col gap-4">
-                <div>
-                    <div class="text-xs text-gray-500 mb-1">Assigned To</div>
-                    <div class="flex items-center gap-3">
-                        <img class="h-9 w-9 rounded-full object-cover ring-2 ring-white shadow-avatar"
-                             src="{{ optional($record->assignedTo->profile)->image_path ? asset('storage/'.$record->assignedTo->profile->image_path) : 'https://ui-avatars.com/api/?name='.urlencode(optional($record->assignedTo)->name) }}">
-                        <div class="font-medium text-gray-900">{{ $record->assignedTo->name ?? '-' }}</div>
-                    </div>
-                </div>
-                <div>
-                    <div class="text-xs text-gray-500 mb-1">Created By</div>
-                    <div class="flex items-center gap-3">
-                        <img class="h-9 w-9 rounded-full object-cover ring-2 ring-white shadow-avatar"
-                             src="{{ optional($record->createdBy->profile)->image_path ? asset('storage/'.$record->createdBy->profile->image_path) : 'https://ui-avatars.com/api/?name='.urlencode(optional($record->createdBy)->name) }}">
-                        <div class="font-medium text-gray-900">{{ $record->createdBy->name ?? '-' }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Checklist --}}
-    <div class="card card--elev p-5">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-900">Checklist</h3>
             @if ($total)
-                <span class="text-sm text-gray-600">{{ $done }} / {{ $total }} done</span>
+                <div class="checklist-list">
+                    @foreach ($record->subtasks as $subtask)
+                        <div class="check-item-modern">
+                            <div class="check-left">
+                                @if (auth()->id() === (int) $record->assigned_to)
+                                    <button
+                                        wire:click="toggleSubtask({{ $subtask->id }})"
+                                        class="check-toggle-modern"
+                                    >
+                                        @if ($subtask->done)
+                                            <x-heroicon-o-check class="h-4 w-4 text-green-600" />
+                                        @endif
+                                    </button>
+                                @else
+                                    <div class="check-toggle-modern check-toggle-modern--readonly">
+                                        @if ($subtask->done)
+                                            <x-heroicon-o-check class="h-4 w-4 text-green-600" />
+                                        @endif
+                                    </div>
+                                @endif
+
+                                <div>
+                                    <div class="check-title {{ $subtask->done ? 'done' : '' }}">
+                                        {{ $subtask->title }}
+                                    </div>
+                                    <div class="check-meta">
+                                        Updated {{ $subtask->updated_at->diffForHumans() }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                @if($subtask->done)
+                                    <span class="mini-badge mini-green">Done</span>
+                                @else
+                                    <span class="mini-badge mini-gray">Pending</span>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <div class="empty-box">
+                    No checklist items yet.
+                </div>
             @endif
         </div>
-
-        @if ($total)
-            <ul class="space-y-2">
-                @foreach ($record->subtasks as $subtask)
-                    <li class="check-item">
-                        <div class="flex items-center gap-3">
-                            @if (auth()->id() === (int) $record->assigned_to)
-                                <button
-                                    wire:click="toggleSubtask({{ $subtask->id }})"
-                                    class="check-toggle"
-                                >
-                                    @if ($subtask->done)
-                                        <x-heroicon-o-check class="h-4 w-4 text-emerald-600" />
-                                    @endif
-                                </button>
-                            @else
-                                <div class="check-toggle check-toggle--readonly">
-                                    @if ($subtask->done)
-                                        <x-heroicon-o-check class="h-4 w-4 text-emerald-600" />
-                                    @endif
-                                </div>
-                            @endif
-
-                            <span class="text-sm {{ $subtask->done ? 'line-through text-gray-500' : 'text-gray-800' }}">
-                                {{ $subtask->title }}
-                            </span>
-                        </div>
-
-                        <span class="text-xs text-gray-500">Updated {{ $subtask->updated_at->diffForHumans() }}</span>
-                    </li>
-                @endforeach
-            </ul>
-        @else
-            <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-gray-500">
-                No checklist items
-            </div>
-        @endif
-    </div>
+    </section>
 </div>
 
-{{-- Advanced styles (no Tailwind @apply needed) --}}
 <style>
-:root{
-  --card-bg: linear-gradient(180deg,#ffffff 0%, #f8fafc 100%);
-  --card-ring: rgba(148,163,184,.28); /* slate-300/28 */
-  --shadow-1: 0 6px 18px -8px rgba(17,24,39,.20);
-  --shadow-2: 0 18px 55px -20px rgba(17,24,39,.25);
-  --shadow-3: 0 2px 0 0 rgba(255,255,255,.8) inset;
-  --soft-grad: linear-gradient(135deg, #fff 0%, #f1f5f9 100%);
-  --accent-amber: #f59e0b;
-  --accent-emerald: #10b981;
-  --accent-sky: #0ea5e9;
-  --line-muted: #e5e7eb; /* gray-200 */
+.task-view-wrap{
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0.25rem 0 1.5rem;
 }
 
-.card{
-  background: var(--card-bg);
-  border-radius: 16px;
-  border: 1px solid var(--card-ring);
-  box-shadow: var(--shadow-1), var(--shadow-2);
-  transition: box-shadow .25s ease, transform .25s ease, border-color .25s ease;
-}
-.card--elev:hover{
-  transform: translateY(-1px);
-  box-shadow: 0 10px 25px -10px rgba(17,24,39,.25), 0 40px 80px -20px rgba(17,24,39,.28);
-  border-color: rgba(148,163,184,.45);
+.soft-card{
+    background: #ffffff;
+    border: 1px solid #e9eef5;
+    border-radius: 20px;
+    box-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
 }
 
-.chip{
-  display:inline-flex;align-items:center;gap:.375rem;
-  padding:.25rem .625rem;border-radius:9999px;font-size:.75rem;font-weight:600;
-  box-shadow: var(--shadow-3);
-  backdrop-filter: saturate(1.1) blur(4px);
+.hero-card{
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    background:
+        radial-gradient(circle at top right, rgba(251, 191, 36, 0.10), transparent 24%),
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 22%),
+        #ffffff;
 }
 
-.kpi{
-  text-align:center;border-radius:12px;padding:.75rem;
-  background: var(--soft-grad);
-  border: 1px solid var(--card-ring);
-  box-shadow: var(--shadow-1);
+.hero-top{
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
 
-.progress-track{
-  background:#e5e7eb;
-}
-.progress-bar{
-  background: linear-gradient(90deg, var(--accent-amber) 0%, var(--accent-emerald) 100%);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.6);
+.hero-main{
+    flex: 1 1 650px;
 }
 
-.step-dot{
-  height:2rem;width:2rem;border-radius:9999px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:.75rem;font-weight:700;color:#475569; /* slate-600 */
-  background:#e5e7eb; /* gray-200 */
-  border:1px solid #e2e8f0; /* slate-200 */
-  box-shadow: var(--shadow-3);
-}
-.step-dot--active{
-  color:white;
-  background: radial-gradient(120% 120% at 30% 20%, var(--accent-amber) 0%, #f97316 40%, #fb923c 100%);
-  border-color: transparent;
-  box-shadow: 0 8px 18px -8px rgba(249,115,22,.6), inset 0 0 0 1px rgba(255,255,255,.35);
+.eyebrow{
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 
-.step-line{
-  flex:1;height:2px;border-radius:9999px;background: var(--line-muted);
-}
-.step-line--active{
-  background: linear-gradient(90deg, var(--accent-amber), var(--accent-emerald));
-  box-shadow: 0 0 0 1px rgba(255,255,255,.25) inset;
-}
-
-.check-item{
-  display:flex;align-items:center;justify-content:space-between;
-  border-radius:14px;padding:.5rem .75rem;
-  background:#ffffff;border:1px solid var(--card-ring);
-  box-shadow: 0 8px 20px -14px rgba(15,23,42,.35);
-  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-}
-.check-item:hover{
-  transform: translateY(-1px);
-  box-shadow: 0 16px 35px -18px rgba(15,23,42,.40);
-  border-color: rgba(148,163,184,.45);
+.task-title{
+    font-size: 2rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.2;
+    margin: 0;
 }
 
-.check-toggle{
-  height:1.5rem;width:1.5rem;border-radius:.5rem;
-  display:flex;align-items:center;justify-content:center;
-  background:#fff;border:1px solid #cbd5e1; /* slate-300 */
-  box-shadow: var(--shadow-3);
-  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
-}
-.check-toggle:hover{ border-color:#94a3b8; } /* slate-400 */
-.check-toggle:focus-visible{ outline:2px solid rgba(245,158,11,.55); outline-offset:2px; }
-.check-toggle--readonly{ background:#f8fafc; border-color:#e2e8f0; }
-
-.shadow-avatar{
-  box-shadow: 0 10px 25px -10px rgba(15,23,42,.35);
-  border-radius:9999px;
+.task-description{
+    margin-top: 0.85rem;
+    font-size: 1rem;
+    line-height: 1.8;
+    color: #4b5563;
+    max-width: 800px;
 }
 
-
-html.dark .card,
-.fi-dark .card,
-[data-theme="dark"] .card {
-  background: linear-gradient(180deg,#0b1220,#0e1526);
-  border-color: rgba(148,163,184,.20);
+.task-description.muted{
+    color: #9ca3af;
 }
 
-html.dark .kpi,
-.fi-dark .kpi,
-[data-theme="dark"] .kpi {
-  background: linear-gradient(135deg,#0b1220,#0e1526);
-  border-color: rgba(148,163,184,.20);
+.hero-badges{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-content: flex-start;
 }
 
-html.dark .check-item,
-.fi-dark .check-item,
-[data-theme="dark"] .check-item {
-  background:#0b1220;
-  border-color: rgba(148,163,184,.20);
+.badge-soft{
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
-html.dark .chip,
-.fi-dark .chip,
-[data-theme="dark"] .chip {
-  background: rgba(255,255,255,.04);
+.badge-gray{
+    background: #f3f4f6;
+    color: #374151;
 }
 
-html.dark .step-dot,
-.fi-dark .step-dot,
-[data-theme="dark"] .step-dot {
-  background:#1f2937;
-  border-color:#0b1220;
-  color:#cbd5e1;
+.badge-blue{
+    background: #e0f2fe;
+    color: #075985;
 }
 
-html.dark .progress-track,
-.fi-dark .progress-track,
-[data-theme="dark"] .progress-track {
-  background:#1f2937;
+.badge-yellow{
+    background: #fef3c7;
+    color: #92400e;
 }
 
+.badge-green{
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-red{
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-dark{
+    background: #eef2ff;
+    color: #4338ca;
+}
+
+.progress-block{
+    margin-top: 1.4rem;
+}
+
+.progress-meta{
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-bottom: 0.55rem;
+}
+
+.progress-track-modern{
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    background: #eef2f7;
+    overflow: hidden;
+}
+
+.progress-fill-modern{
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #60a5fa 0%, #34d399 100%);
+}
+
+.info-grid{
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.info-card{
+    padding: 1.2rem;
+    min-height: 170px;
+}
+
+.info-label{
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.8rem;
+}
+
+.info-value{
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.5;
+}
+
+.info-value.small{
+    font-size: 1rem;
+}
+
+.info-sub{
+    margin-top: 0.65rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+}
+
+.info-meta{
+    margin-top: 0.3rem;
+    color: #9ca3af;
+    font-size: 0.87rem;
+}
+
+.person-row{
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.avatar-modern{
+    width: 46px;
+    height: 46px;
+    border-radius: 999px;
+    object-fit: cover;
+    border: 3px solid #f8fafc;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.10);
+}
+
+.meta-list{
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.meta-row{
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.92rem;
+    color: #6b7280;
+}
+
+.meta-row strong{
+    color: #111827;
+    font-weight: 600;
+    text-align: right;
+}
+
+.content-grid{
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 1rem;
+}
+
+.attachment-card,
+.checklist-card{
+    padding: 1.2rem;
+}
+
+.section-head{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.section-head h2{
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.section-counter{
+    font-size: 0.85rem;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.attachment-link{
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 0.8rem 1rem;
+    border-radius: 14px;
+    background: #eff6ff;
+    transition: 0.2s ease;
+}
+
+.attachment-link:hover{
+    background: #dbeafe;
+}
+
+.empty-box{
+    border: 1px dashed #dbe2ea;
+    background: #f8fafc;
+    color: #94a3b8;
+    border-radius: 16px;
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.95rem;
+}
+
+.checklist-list{
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.check-item-modern{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid #edf2f7;
+    background: #fcfdff;
+    border-radius: 16px;
+    transition: 0.2s ease;
+}
+
+.check-item-modern:hover{
+    background: #f8fbff;
+    border-color: #dbe7f3;
+}
+
+.check-left{
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-width: 0;
+}
+
+.check-toggle-modern{
+    width: 2rem;
+    height: 2rem;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid #d6dee8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: 0.2s ease;
+}
+
+.check-toggle-modern:hover{
+    border-color: #93c5fd;
+    background: #f8fbff;
+}
+
+.check-toggle-modern--readonly{
+    background: #f9fafb;
+}
+
+.check-title{
+    font-size: 0.97rem;
+    color: #111827;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.check-title.done{
+    color: #9ca3af;
+    text-decoration: line-through;
+}
+
+.check-meta{
+    font-size: 0.82rem;
+    color: #9ca3af;
+    margin-top: 0.2rem;
+}
+
+.mini-badge{
+    display: inline-flex;
+    align-items: center;
+    padding: 0.32rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.mini-green{
+    background: #dcfce7;
+    color: #166534;
+}
+
+.mini-gray{
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+@media (max-width: 1100px){
+    .info-grid{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .content-grid{
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px){
+    .info-grid{
+        grid-template-columns: 1fr;
+    }
+
+    .task-title{
+        font-size: 1.55rem;
+    }
+
+    .hero-card,
+    .info-card,
+    .attachment-card,
+    .checklist-card{
+        padding: 1rem;
+    }
+
+    .check-item-modern{
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* Dark mode */
+html.dark .soft-card,
+.fi-dark .soft-card,
+[data-theme="dark"] .soft-card{
+    background: #111827;
+    border-color: #1f2937;
+    box-shadow: none;
+}
+
+html.dark .hero-card,
+.fi-dark .hero-card,
+[data-theme="dark"] .hero-card{
+    background:
+        radial-gradient(circle at top right, rgba(251, 191, 36, 0.08), transparent 24%),
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 22%),
+        #111827;
+}
+
+html.dark .task-title,
+html.dark .section-head h2,
+html.dark .info-value,
+html.dark .meta-row strong,
+html.dark .check-title,
+.fi-dark .task-title,
+.fi-dark .section-head h2,
+.fi-dark .info-value,
+.fi-dark .meta-row strong,
+.fi-dark .check-title,
+[data-theme="dark"] .task-title,
+[data-theme="dark"] .section-head h2,
+[data-theme="dark"] .info-value,
+[data-theme="dark"] .meta-row strong,
+[data-theme="dark"] .check-title{
+    color: #f9fafb;
+}
+
+html.dark .task-description,
+html.dark .meta-row,
+html.dark .progress-meta,
+.fi-dark .task-description,
+.fi-dark .meta-row,
+.fi-dark .progress-meta,
+[data-theme="dark"] .task-description,
+[data-theme="dark"] .meta-row,
+[data-theme="dark"] .progress-meta{
+    color: #d1d5db;
+}
+
+html.dark .info-label,
+html.dark .info-meta,
+html.dark .check-meta,
+.fi-dark .info-label,
+.fi-dark .info-meta,
+.fi-dark .check-meta,
+[data-theme="dark"] .info-label,
+[data-theme="dark"] .info-meta,
+[data-theme="dark"] .check-meta{
+    color: #9ca3af;
+}
+
+html.dark .progress-track-modern,
+.fi-dark .progress-track-modern,
+[data-theme="dark"] .progress-track-modern{
+    background: #1f2937;
+}
+
+html.dark .check-item-modern,
+.fi-dark .check-item-modern,
+[data-theme="dark"] .check-item-modern{
+    background: #0f172a;
+    border-color: #1e293b;
+}
+
+html.dark .check-item-modern:hover,
+.fi-dark .check-item-modern:hover,
+[data-theme="dark"] .check-item-modern:hover{
+    background: #111827;
+}
+
+html.dark .check-toggle-modern,
+.fi-dark .check-toggle-modern,
+[data-theme="dark"] .check-toggle-modern{
+    background: #111827;
+    border-color: #334155;
+}
+
+html.dark .empty-box,
+.fi-dark .empty-box,
+[data-theme="dark"] .empty-box{
+    background: #0f172a;
+    border-color: #1f2937;
+    color: #94a3b8;
+}
 </style>
 </x-filament::page>
