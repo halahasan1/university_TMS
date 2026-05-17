@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CourseMaterialResource\Pages;
+use App\Models\Course;
 use App\Models\CourseMaterial;
 use Filament\Forms;
 use Filament\Forms\Components\Actions;
@@ -12,6 +13,8 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -24,12 +27,153 @@ class CourseMaterialResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-document-arrow-down';
     protected static ?string $navigationLabel = 'Course Materials';
 
+    // public static function canAccess(): bool
+    // {
+    //     $user = Auth::user();
+
+    //     return $user && $user->hasAnyRole([
+    //         'super_admin',
+    //         'professor',
+    //     ]);
+    // }
+
+    public static function canCreate(): bool
+    {
+        $user = Auth::user();
+
+        return $user && $user->hasAnyRole([
+            'super_admin',
+            'professor',
+        ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        $user = Auth::user();
+
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($user->hasRole('super_admin')) {
+            return $query;
+        }
+
+        if ($user->hasRole('professor')) {
+            return $query->whereHas('course', function (Builder $courseQuery) use ($user) {
+                $courseQuery->where('owner_id', $user->id);
+            });
+        }
+
+        if ($user->hasAnyRole(['student', 'representative_student','dean'])) {
+            $departmentId = $user->profile?->department_id;
+
+            if (! $departmentId) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->whereHas('course', function (Builder $courseQuery) use ($departmentId) {
+                $courseQuery->where('department_id', $departmentId);
+            });
+        }
+
+        return $query->whereRaw('1 = 0');
+    }
+
+    public static function canManageMaterial(CourseMaterial $material): bool
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasRole('super_admin')) {
+            return true;
+        }
+
+        if ($user->hasRole('professor')) {
+            return $material->course?->owner_id === $user->id;
+        }
+
+        return false;
+    }
+    public static function canView($record): bool
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasRole('super_admin')) {
+            return true;
+        }
+
+        if ($user->hasRole('professor')) {
+            return $record->course?->owner_id === $user->id;
+        }
+
+        if ($user->hasAnyRole(['student', 'representative_student'])) {
+            return $record->course?->department_id === $user->profile?->department_id;
+        }
+
+        return false;
+    }
+
+
+    public static function canEdit($record): bool
+    {
+        return static::canManageMaterial($record);
+    }
+
+    public static function canDelete($record): bool
+    {
+        return static::canManageMaterial($record);
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        $user = Auth::user();
+
+        return $user && $user->hasAnyRole([
+            'super_admin',
+            'dean',
+            'professor',
+        ]);
+    }
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\Select::make('course_id')
-                    ->relationship('course', 'name')
+                    ->label('Course')
+                    ->options(function () {
+                        $user = Auth::user();
+
+                        if (! $user) {
+                            return [];
+                        }
+
+                        if ($user->hasRole('super_admin')) {
+                            return Course::query()
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->toArray();
+                        }
+
+                        if ($user->hasRole('professor')) {
+                            return Course::query()
+                                ->where('owner_id', $user->id)
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->toArray();
+                        }
+
+                        return [];
+                    })
                     ->required()
                     ->searchable()
                     ->preload(),
@@ -60,6 +204,7 @@ class CourseMaterialResource extends Resource
                                     ->title('Please upload a file first.')
                                     ->danger()
                                     ->send();
+
                                 return;
                             }
 
@@ -85,6 +230,7 @@ class CourseMaterialResource extends Resource
                                         ->body('State type: ' . (is_object($fileState) ? get_class($fileState) : gettype($fileState)))
                                         ->danger()
                                         ->send();
+
                                     return;
                                 }
 
@@ -100,6 +246,7 @@ class CourseMaterialResource extends Resource
                                         ->body($response->body())
                                         ->danger()
                                         ->send();
+
                                     return;
                                 }
 
@@ -111,6 +258,7 @@ class CourseMaterialResource extends Resource
                                         ->title('No text extracted.')
                                         ->warning()
                                         ->send();
+
                                     return;
                                 }
 
@@ -142,7 +290,8 @@ class CourseMaterialResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('id')->sortable(),
+                Tables\Columns\TextColumn::make('id')
+                    ->sortable(),
 
                 Tables\Columns\TextColumn::make('course.name')
                     ->label('Course')
@@ -150,6 +299,7 @@ class CourseMaterialResource extends Resource
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('title')
+                    ->label('Lecture Title')
                     ->sortable()
                     ->searchable(),
 
@@ -162,10 +312,19 @@ class CourseMaterialResource extends Resource
                     ->sortable(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make()
+                    ->label('View Lecture')
+                    ->icon('heroicon-o-eye'),
+
+                Tables\Actions\EditAction::make()
+                    ->visible(fn (CourseMaterial $record) => static::canManageMaterial($record)),
+
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn (CourseMaterial $record) => static::canManageMaterial($record)),
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
+                Tables\Actions\DeleteBulkAction::make()
+                    ->visible(fn () => Auth::user()?->hasRole('super_admin')),
             ]);
     }
 
@@ -174,6 +333,7 @@ class CourseMaterialResource extends Resource
         return [
             'index'  => Pages\ListCourseMaterials::route('/'),
             'create' => Pages\CreateCourseMaterial::route('/create'),
+            'view'   => Pages\ViewCourseMaterial::route('/{record}'),
             'edit'   => Pages\EditCourseMaterial::route('/{record}/edit'),
         ];
     }

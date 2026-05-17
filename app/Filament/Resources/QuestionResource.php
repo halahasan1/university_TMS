@@ -9,6 +9,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 class QuestionResource extends Resource
 {
@@ -17,6 +18,17 @@ class QuestionResource extends Resource
     protected static ?string $navigationGroup = 'Courses & Exams';
     protected static ?string $navigationIcon = 'heroicon-o-question-mark-circle';
     protected static ?string $navigationLabel = 'Questions';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        $user = Auth::user();
+
+        return $user && $user->hasAnyRole([
+            'super_admin',
+            'dean',
+            'professor',
+        ]);
+    }
 
     public static function form(Form $form): Form
     {

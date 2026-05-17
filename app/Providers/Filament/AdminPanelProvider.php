@@ -2,27 +2,29 @@
 
 namespace App\Providers\Filament;
 
-use Filament\Pages;
-use Filament\Panel;
-use Filament\Widgets;
-use Filament\PanelProvider;
-use Filament\Navigation\MenuItem;
-use Filament\Support\Colors\Color;
-use Filament\Navigation\NavigationItem;
-use Filament\Http\Middleware\Authenticate;
+use App\Filament\Resources\CourseResource\Pages\MyCourses;
+use App\Filament\Resources\ExamResource\Pages\MyExams;
+use App\Filament\Resources\ExamResource\Pages\TakeExam;
 use App\Filament\Resources\ProfileResource;
-use Illuminate\Session\Middleware\StartSession;
-use Illuminate\Cookie\Middleware\EncryptCookies;
-use Filament\Http\Middleware\AuthenticateSession;
-use App\Filament\Widgets\HeaderMiniCalendarWidget;
-use Illuminate\Routing\Middleware\SubstituteBindings;
 use App\Filament\Resources\TaskResource\Pages\MyTasks;
-use Illuminate\View\Middleware\ShareErrorsFromSession;
+use App\Filament\Widgets\HeaderMiniCalendarWidget;
+use Filament\Http\Middleware\Authenticate;
+use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Filament\Navigation\MenuItem;
+use Filament\Navigation\NavigationItem;
+use Filament\Pages;
+use Filament\Panel;
+use Filament\PanelProvider;
+use Filament\Support\Colors\Color;
+use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
-use App\Filament\Resources\CourseResource\Pages\MyCourses;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Session\Middleware\StartSession;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -47,7 +49,8 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Pages\Dashboard::class,
                 MyTasks::class,
                 MyCourses::class,
-
+                MyExams::class,
+                TakeExam::class
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
 

@@ -37,4 +37,10 @@ class Exam extends Model
     {
         return $this->hasMany(ExamAttempt::class);
     }
+    public function questions()
+    {
+        return $this->belongsToMany(Question::class, 'exam_questions')
+            ->withPivot('points')
+            ->withTimestamps();
+    }
 }

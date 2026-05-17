@@ -2,13 +2,14 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Resources\DepartmentResource\Pages;
 use App\Models\Department;
 use Filament\Forms;
-use Filament\Tables;
 use Filament\Forms\Form;
-use Filament\Tables\Table;
 use Filament\Resources\Resource;
-use App\Filament\Resources\DepartmentResource\Pages;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 class DepartmentResource extends Resource
 {
@@ -20,10 +21,11 @@ class DepartmentResource extends Resource
     protected static ?string $navigationGroup = 'Academic Management';
 
 
-    public static function shouldRegisterNavigation(): bool
+    public static function canAccess(): bool
     {
-        return auth()->user()?->can('manage-departments');
+       return Auth::user()?->hasRole('super_admin') ?? false;
     }
+    
     public static function form(Form $form): Form
     {
         return $form

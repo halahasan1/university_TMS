@@ -29,6 +29,16 @@ class TaskResource extends Resource
     protected static ?int $navigationSort = 2;
 
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        $user = Auth::user();
+
+        return $user && $user->hasAnyRole([
+            'super_admin',
+            'dean',
+            'professor',
+        ]);
+    }
     public static function form(Form $form): Form
     {
         $user = Auth::user();

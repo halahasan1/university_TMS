@@ -9,6 +9,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 class AcademicYearResource extends Resource
 {
@@ -18,6 +19,11 @@ class AcademicYearResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
     protected static ?string $navigationLabel = 'Academic Years';
 
+    public static function canAccess(): bool
+    {
+       return Auth::user()?->hasRole('super_admin') ?? false;
+    }
+    
     public static function form(Form $form): Form
     {
         return $form

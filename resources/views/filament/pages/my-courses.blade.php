@@ -89,7 +89,18 @@
                 </div>
 
                 <div class="course-bottom-row">
-                    <button type="button" class="review-btn">
+                    <a
+                        href="{{ \App\Filament\Resources\CourseResource::getUrl('view', ['record' => $course]) }}"
+                        class="view-course-btn"
+                    >
+                        View Course
+                    </a>
+
+                    <button
+                        type="button"
+                        class="review-btn"
+                        wire:click="mountAction('writeReview', { course: {{ $course->id }} })"
+                    >
                         Write Review
                     </button>
                 </div>
@@ -374,5 +385,29 @@ html.dark .empty-section-box,
     border-color: #1f2937;
     color: #94a3b8;
 }
+.course-bottom-row{
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.view-course-btn{
+    text-decoration: none;
+    background: #111827;
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 0.7rem 1rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    transition: 0.2s ease;
+}
+
+.view-course-btn:hover{
+    background: #1f2937;
+    color: #ffffff;
+}
 </style>
+<x-filament-actions::modals />
 </x-filament::page>
